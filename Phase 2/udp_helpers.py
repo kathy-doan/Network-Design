@@ -1,7 +1,7 @@
 """
 Benjamin Dearden
 EECE 4830
-Project Phase 1
+Project Phase 2
 Helper function
 """
 from socket import *

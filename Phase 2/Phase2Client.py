@@ -24,13 +24,13 @@ def send_message(server_name, server_port, client_socket):
 
 
 def main():
+    # for i in range(13): EDIT HERE TO CREATE LOOP
     server_name = '127.0.0.1'
     server_port = 12000
     client_socket = socket(AF_INET, SOCK_DGRAM)
     client_socket.settimeout(1.0)  # timeout for receive function
     final_message = "All packets sent."
     sequence_number = 0  # packet sequence number to maintain packet order
-
     while True:
         try:
             packet = make_packet("cat.jpg", sequence_number)
