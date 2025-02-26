@@ -22,7 +22,8 @@ def receive_packet(data, client_address, server_socket):
         if checksum(data_packet) == checksum_value:
             if random.random() < 0.1:
                 print(f"Simulating bit error in ACK for packet {sequence_number}")
-                server_socket.sendto(str(sequence_number + 1).encode(), client_address)
+                return None, False
+                #  server_socket.sendto(str(sequence_number + 1).encode(), client_address)
             else:
                 server_socket.sendto(str(sequence_number).encode(), client_address)
             print(f"Received packet {sequence_number} from {client_address} with current checksum"

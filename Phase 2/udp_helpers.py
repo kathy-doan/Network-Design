@@ -43,6 +43,7 @@ def send_packet(packet, server_name, server_port, client_socket, sequence_number
             acknowledgement, _ = client_socket.recvfrom(2048)
             ack_sequence_number = int(acknowledgement.decode())
             if ack_sequence_number == sequence_number:
+                print(f"Packet received: {ack_sequence_number}")
                 break
             else:
                 print(f"Sequence number mismatch: {ack_sequence_number}, expected {sequence_number}")
