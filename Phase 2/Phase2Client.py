@@ -34,7 +34,7 @@ def main():
     while True:
         try:
             packet = make_packet("cat.jpg", sequence_number)
-            if packet is None: # no more packets
+            if packet is None:  # no more packets
                 client_socket.sendto("END".encode(), (server_name, server_port))
                 break
             send_packet(packet, server_name, server_port, client_socket, sequence_number)
@@ -43,6 +43,7 @@ def main():
             print(f"Error: {e}")
     print("All packets sent.")
     client_socket.close()
+
 
 '''    
     try:

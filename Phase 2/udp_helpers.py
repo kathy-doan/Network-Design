@@ -6,6 +6,7 @@ Helper function
 """
 from socket import *
 
+
 def make_packet_old(file_name, server_name, server_port, client_socket):
     try:
         with open(file_name, "rb") as file_to_read:
@@ -43,6 +44,8 @@ def send_packet(packet, server_name, server_port, client_socket, sequence_number
             ack_sequence_number = int(acknowledgement.decode())
             if ack_sequence_number == sequence_number:
                 break
+            else:
+                print(f"Sequence number mismatch: {ack_sequence_number}, expected {sequence_number}")
         except timeout:
             print(f"ACK not received for {sequence_number}, resending packet.")
 

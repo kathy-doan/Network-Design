@@ -5,6 +5,7 @@ Project Phase 1 Server
 """
 from socket import *
 from udp_helpers import checksum
+import random
 
 
 def receive_packet(data, client_address, server_socket):
@@ -19,7 +20,11 @@ def receive_packet(data, client_address, server_socket):
         checksum_value = int(checksum_value)
 
         if checksum(data_packet) == checksum_value:
-            server_socket.sendto(str(sequence_number).encode(), client_address)
+            if random.random() < 0.1:
+                print(f"Simulating bit error in ACK for packet {sequence_number}")
+                server_socket.sendto(str(sequence_number + 1).encode(), client_address)
+            else:
+                server_socket.sendto(str(sequence_number).encode(), client_address)
             print(f"Received packet {sequence_number} from {client_address} with current checksum"
                   f", sending ACK, packet size: {len(data_packet)} bytes")
             return data_packet, False
@@ -48,26 +53,26 @@ def receive_packet(data, client_address, file_data, file_name, server_socket):
 
 
 def main():
-    serverPort = 12000
-    serverSocket = socket(AF_INET, SOCK_DGRAM)
-    serverSocket.bind(("", serverPort))
-    print(f"The server is ready to receive on port {serverPort}")
+    server_port = 12000
+    server_socket = socket(AF_INET, SOCK_DGRAM)
+    server_socket.bind(("", server_port))
+    print(f"The server is ready to receive on port {server_port}")
     file_name = "transmitted_cat.jpg"
     file_data = bytearray()
-    #file_data = b""
-    #file_name = "transmitted_cat.jpg"
+    #  file_data = b""
+    #  file_name = "transmitted_cat.jpg"
 
     while True:
         try:
-            message, client_address = serverSocket.recvfrom(2048)
-            data, finished = receive_packet(message, client_address, serverSocket)
+            message, client_address = server_socket.recvfrom(2048)
+            data, finished = receive_packet(message, client_address, server_socket)
             if data is not None:
                 file_data.extend(data)
             if finished:
                 with open(file_name, "wb") as file:
                     file.write(file_data)
                 print(f"File {file_name} saved successfully")
-                file_data = bytearray() # clear
+                file_data = bytearray()  # clear
         except Exception as e:
             print(f"Error: {e}")
 
