@@ -5,7 +5,9 @@ EECE 4830
 Project Phase 2 Client
 """
 from socket import *
-from udp_helpers import make_packet
+from udp_helpers import *
+
+
 '''
 send_message function is for sending hello from client to server
 def send_message(server_name, server_port, client_socket):
@@ -19,18 +21,36 @@ def send_message(server_name, server_port, client_socket):
     except Exception as e:
         print(f"Error while sending message: {e}")
 '''
+
+
 def main():
     server_name = '127.0.0.1'
     server_port = 12000
     client_socket = socket(AF_INET, SOCK_DGRAM)
+    client_socket.settimeout(1.0)  # timeout for receive function
     final_message = "All packets sent."
+    sequence_number = 0  # packet sequence number to maintain packet order
 
+    while True:
+        try:
+            packet = make_packet("cat.jpg", sequence_number)
+            if packet is None: # no more packets
+                client_socket.sendto("END".encode(), (server_name, server_port))
+                break
+            send_packet(packet, server_name, server_port, client_socket, sequence_number)
+            sequence_number += 1
+        except Exception as e:
+            print(f"Error: {e}")
+    print("All packets sent.")
+    client_socket.close()
+
+'''    
     try:
-        make_packet("cat.jpg", server_name, server_port, client_socket)
+        make_packet_old("cat.jpg", server_name, server_port, client_socket)
         #send_message(server_name, server_port, client_socket)
     finally:
         print(final_message)
         client_socket.close()
-
+'''
 if __name__ == "__main__":
     main()

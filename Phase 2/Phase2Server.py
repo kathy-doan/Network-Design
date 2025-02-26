@@ -4,8 +4,31 @@ EECE 4830
 Project Phase 1 Server
 """
 from socket import *
+from udp_helpers import checksum
 
 
+def receive_packet(data, client_address, server_socket):
+    decoded_message = data.decode(errors='ignore')
+    if decoded_message == "END":
+        print(f"Received END message from {client_address}, closing connection")
+        server_socket.sendto("ACK".encode(), client_address)
+        return None, True
+    else:
+        sequence_number, checksum_value, data_packet = data.split(b'|', 2)
+        sequence_number = int(sequence_number)
+        checksum_value = int(checksum_value)
+
+        if checksum(data_packet) == checksum_value:
+            server_socket.sendto(str(sequence_number).encode(), client_address)
+            print(f"Received packet {sequence_number} from {client_address} with current checksum"
+                  f", sending ACK, packet size: {len(data_packet)} bytes")
+            return data_packet, False
+        else:
+            print(f"Received incorrect packet from {client_address}, ignoring")
+            return b"", False
+
+
+'''
 def receive_packet(data, client_address, file_data, file_name, server_socket):
     decoded_message = data.decode(errors="ignore")
     if decoded_message == "END":
@@ -21,6 +44,7 @@ def receive_packet(data, client_address, file_data, file_name, server_socket):
               f" {int(sequence_number)} and size: {len(data_packet)} bytes")
 
     return file_data + data_packet
+'''
 
 
 def main():
@@ -28,9 +52,27 @@ def main():
     serverSocket = socket(AF_INET, SOCK_DGRAM)
     serverSocket.bind(("", serverPort))
     print(f"The server is ready to receive on port {serverPort}")
-    file_data = b""
     file_name = "transmitted_cat.jpg"
+    file_data = bytearray()
+    #file_data = b""
+    #file_name = "transmitted_cat.jpg"
 
+    while True:
+        try:
+            message, client_address = serverSocket.recvfrom(2048)
+            data, finished = receive_packet(message, client_address, serverSocket)
+            if data is not None:
+                file_data.extend(data)
+            if finished:
+                with open(file_name, "wb") as file:
+                    file.write(file_data)
+                print(f"File {file_name} saved successfully")
+                file_data = bytearray() # clear
+        except Exception as e:
+            print(f"Error: {e}")
+
+
+'''
     while True:
         try:
             message, clientAddress = serverSocket.recvfrom(2048)
@@ -39,6 +81,7 @@ def main():
             file_data = receive_packet(packet, clientAddress, file_data, file_name, serverSocket)
         except Exception as e:
             print(f"Error: {e}")
+'''
 
 
 if __name__ == "__main__":
