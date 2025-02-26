@@ -26,7 +26,7 @@ def main():
     final_message = "All packets sent."
 
     try:
-        make_packet("image.bmp", server_name, server_port, client_socket)
+        make_packet("cat.jpg", server_name, server_port, client_socket)
         #send_message(server_name, server_port, client_socket)
     finally:
         print(final_message)
