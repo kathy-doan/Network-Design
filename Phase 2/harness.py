@@ -26,7 +26,7 @@ def debug_print(msg):
 # Configuration
 SERVER_ADDRESS = '127.0.0.1'
 SERVER_PORT = 12000
-SIMULATION_MODE = 2  # Set desired simulation mode here: 1, 2, or 3.
+SIMULATION_MODE = 3  # Set desired simulation mode here: 1, 2, or 3.
 ERROR_RATES = [i/100.0 for i in range(0, 65, 5)]  # 0.00, 0.05, ..., 0.60
 TRIALS = 3  # Number of runs per error rate
 

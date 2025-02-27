@@ -36,3 +36,6 @@ Simulation plot for mode 1: No loss/bit-errors
 
 ![alt_text](simulationMode2plot.png)
 Simulation plot for mode 2: ACK packet bit-error
+
+![alt_text](simulationMode3plot.png)
+Simulation plot for mode 3: Data packet bit-error
