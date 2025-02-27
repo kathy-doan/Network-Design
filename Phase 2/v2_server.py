@@ -2,6 +2,9 @@
 """
 Phase2Server.py - RDT 2.2 Server for EECE 4830-5830 Network Design Project Phase 2
 Benjamin Dearden
+Michael Smith
+Peter Dingue
+Kathy Doan
 """
 
 import os

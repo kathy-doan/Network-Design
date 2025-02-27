@@ -7,6 +7,9 @@ and plots the average completion times over 3 runs. Use simulation_mode to selec
     2: Simulated ACK packet bit-errors.
     3: Simulated Data packet bit-errors.
 Benjamin Dearden
+Michael Smith
+Peter Dingue
+Kathy Doan
 """
 
 import threading
@@ -23,9 +26,10 @@ def debug_print(msg):
 # Configuration
 SERVER_ADDRESS = '127.0.0.1'
 SERVER_PORT = 12000
-SIMULATION_MODE = 1  # Set desired simulation mode here: 1, 2, or 3.
+SIMULATION_MODE = 2  # Set desired simulation mode here: 1, 2, or 3.
 ERROR_RATES = [i/100.0 for i in range(0, 65, 5)]  # 0.00, 0.05, ..., 0.60
 TRIALS = 3  # Number of runs per error rate
+
 
 def run_single_transfer(error_rate):
     """
@@ -52,6 +56,7 @@ def run_single_transfer(error_rate):
     # Wait for server thread to finish
     server.join()
     return completion_time
+
 
 def main():
     debug_print(f"Starting tests with simulation mode {SIMULATION_MODE}")
