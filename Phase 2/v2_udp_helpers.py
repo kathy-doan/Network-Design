@@ -6,11 +6,32 @@ Benjamin Dearden
 
 import random
 
+
 def checksum(data):
     """
-    Computes a simple checksum by summing the byte values modulo 256.
+    Computes a checksum using a one's complement sum over 16-bit words.
+    This custom checksum implementation:
+      1. Pads the data with a zero byte if its length is odd.
+      2. Processes the data in 16-bit (2-byte) chunks.
+      3. Sums the 16-bit words with wrap-around for overflow.
+      4. Returns the one's complement of the sum as a 16-bit integer.
     """
-    return sum(data) % 256
+    # Ensure even number of bytes
+    if len(data) % 2 == 1:
+        data += b'\x00'
+
+    total = 0
+    # Process every 2 bytes as a 16-bit word
+    for i in range(0, len(data), 2):
+        word = (data[i] << 8) + data[i + 1]
+        total += word
+        # Wrap around if overflow occurs
+        total = (total & 0xFFFF) + (total >> 16)
+
+    # One's complement
+    checksum_value = ~total & 0xFFFF
+    return checksum_value
+
 
 def flip_bit(data):
     """
@@ -25,6 +46,7 @@ def flip_bit(data):
     bit_index = bit_to_flip % 8
     mutable[byte_index] ^= (1 << bit_index)
     return bytes(mutable)
+
 
 def make_packet(file_name, sequence_number, packet_size=1024):
     """
@@ -45,6 +67,7 @@ def make_packet(file_name, sequence_number, packet_size=1024):
     chk_value = checksum(data)
     header = f"{sequence_number}|{chk_value}|".encode()
     return header + data
+
 
 def send_packet(packet, server_address, server_port, client_socket, sequence_number, simulation_mode, error_rate):
     """

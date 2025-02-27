@@ -4,6 +4,7 @@ Phase2Server.py - RDT 2.2 Server for EECE 4830-5830 Network Design Project Phase
 Benjamin Dearden
 """
 
+import os
 import socket
 import random
 import time
@@ -11,13 +12,12 @@ import matplotlib
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-from udp_helpers import checksum
+from v2_udp_helpers import checksum, flip_bit
 
 # Configuration constants
 SERVER_PORT = 12000
-OUTPUT_FILE = "transmitted_cat.jpg"
 BUFFER_SIZE = 2048
-
+OUTPUT_FOLDER = "cat"
 
 def receive_packet(data, client_address, server_socket, simulation_mode, error_rate):
     """
@@ -103,13 +103,23 @@ def run_server(simulation_mode, error_rate):
                 last_sequence = sequence_number
         except Exception as e:
             print(f"Server error: {e}")
-
-    with open(OUTPUT_FILE, "wb") as f:
+    # Ensure the output folder exists
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    # Create a unique output file name based on simulation mode and error rate.
+    error_percent = int(error_rate * 100)
+    output_file = os.path.join(OUTPUT_FOLDER, f"transmitted_cat_mode{simulation_mode}_error{error_percent}.jpg")
+    with open(output_file, "wb") as f:
         f.write(file_data)
     server_socket.close()
     completion_time = time.time() - start_time
-    print(f"File saved as {OUTPUT_FILE} in {completion_time:.2f} seconds.")
+    print(f"File saved as {output_file} in {completion_time:.2f} seconds.")
     return completion_time
+    # with open(OUTPUT_FILE, "wb") as f:
+    #     f.write(file_data)
+    # server_socket.close()
+    # completion_time = time.time() - start_time
+    # print(f"File saved as {OUTPUT_FILE} in {completion_time:.2f} seconds.")
+    # return completion_time
 
 
 def plot_performance(loss_percentages, completion_times, simulation_mode):
