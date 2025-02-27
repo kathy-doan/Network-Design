@@ -14,10 +14,19 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from v2_udp_helpers import checksum, flip_bit
 
+DEBUG = False  # Set to True to enable debug output
+
+
+def debug_print(msg):
+    if DEBUG:
+        print(msg)
+
+
 # Configuration constants
 SERVER_PORT = 12000
 BUFFER_SIZE = 2048
 OUTPUT_FOLDER = "cat"
+
 
 def receive_packet(data, client_address, server_socket, simulation_mode, error_rate):
     """
@@ -43,48 +52,33 @@ def receive_packet(data, client_address, server_socket, simulation_mode, error_r
         checksum_value = int(parts[1])
         data_packet = parts[2]
     except Exception as e:
-        print(f"Error parsing packet: {e}")
+        debug_print(f"Error parsing packet: {e}")
         return None, None, b"", False
 
     # Option 3: Simulate data packet bit-error at receiver.
     if simulation_mode == 3 and random.random() < error_rate:
-        print(f"Simulating data bit-error for packet {sequence_number}")
+        debug_print(f"Simulating data bit-error for packet {sequence_number}")
         data_packet = flip_bit(data_packet)
 
     if checksum(data_packet) == checksum_value:
-        # For Option 2, ACK corruption is now handled at the sender.
+        # For Option 2, ACK corruption is handled at the sender.
         server_socket.sendto(str(sequence_number).encode(), client_address)
         return sequence_number, checksum_value, data_packet, False
     else:
-        print(f"Checksum mismatch for packet {sequence_number}")
+        debug_print(f"Checksum mismatch for packet {sequence_number}")
         # Do not send a valid ACK if checksum fails.
         return sequence_number, checksum_value, b"", False
-
-
-def flip_bit(data):
-    """
-    Flips one random bit in the data (used to simulate a bit-error).
-    """
-    if not data:
-        return data
-    # Convert bytes to a mutable bytearray
-    mutable = bytearray(data)
-    total_bits = len(mutable) * 8
-    bit_to_flip = random.randrange(total_bits)
-    byte_index = bit_to_flip // 8
-    bit_index = bit_to_flip % 8
-    mutable[byte_index] ^= (1 << bit_index)
-    return bytes(mutable)
 
 
 def run_server(simulation_mode, error_rate):
     """
     Runs the UDP server to receive a file using the RDT 2.2 protocol.
     Returns the total completion time.
+    The output file is saved in a subfolder "cat" with a filename based on simulation mode and error rate.
     """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(("", SERVER_PORT))
-    print(
+    debug_print(
         f"Server listening on port {SERVER_PORT} with simulation mode {simulation_mode} and error rate {error_rate * 100:.0f}%")
 
     file_data = bytearray()
@@ -102,7 +96,8 @@ def run_server(simulation_mode, error_rate):
                 file_data.extend(data)
                 last_sequence = sequence_number
         except Exception as e:
-            print(f"Server error: {e}")
+            debug_print(f"Server error: {e}")
+
     # Ensure the output folder exists
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     # Create a unique output file name based on simulation mode and error rate.
@@ -112,23 +107,17 @@ def run_server(simulation_mode, error_rate):
         f.write(file_data)
     server_socket.close()
     completion_time = time.time() - start_time
-    print(f"File saved as {output_file} in {completion_time:.2f} seconds.")
+    debug_print(f"File saved as {output_file} in {completion_time:.2f} seconds.")
     return completion_time
-    # with open(OUTPUT_FILE, "wb") as f:
-    #     f.write(file_data)
-    # server_socket.close()
-    # completion_time = time.time() - start_time
-    # print(f"File saved as {OUTPUT_FILE} in {completion_time:.2f} seconds.")
-    # return completion_time
 
 
-def plot_performance(loss_percentages, completion_times, simulation_mode):
+def plot_performance(loss_percentages, completion_times, simulation_mode, avg_num):
     """
     Plots the file transmission completion time against error rates.
     """
     plt.figure(figsize=(10, 5))
     plt.plot(loss_percentages, completion_times, marker='o')
-    plt.title(f'Completion Time vs Error Rate (Simulation Mode {simulation_mode})')
+    plt.title(f'Completion Time vs Error Rate (Simulation Mode {simulation_mode}) Runs: {avg_num} ')
     plt.xlabel('Error Rate (%)')
     plt.ylabel('Completion Time (s)')
     plt.grid(True)

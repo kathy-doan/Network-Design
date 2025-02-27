@@ -8,6 +8,12 @@ import socket
 import time
 from v2_udp_helpers import make_packet, send_packet
 
+DEBUG = False  # Set to True to enable debug output
+
+def debug_print(msg):
+    if DEBUG:
+        print(msg)
+
 # Configuration constants
 SERVER_ADDRESS = '127.0.0.1'
 SERVER_PORT = 12000
@@ -35,18 +41,18 @@ def send_file(simulation_mode, error_rate):
                         sequence_number, simulation_mode, error_rate)
             sequence_number += 1
     except Exception as e:
-        print(f"Client encountered error: {e}")
+        debug_print(f"Client encountered error: {e}")
     finally:
         client_socket.close()
 
 def main():
-    # For standalone running, default to Option 1 (no errors) and error_rate 0
-    simulation_mode = 1  # 1: No errors; 2: ACK errors; 3: Data errors
+    # For standalone running, default to Option 1 (no errors) and error_rate 0.
+    simulation_mode = 1  # 1: No errors; 2: ACK errors; 3: Data errors.
     error_rate = 0.0
     start = time.time()
     send_file(simulation_mode, error_rate)
     end = time.time()
-    print(f"File sent in {end - start:.2f} seconds.")
+    debug_print(f"File sent in {end - start:.2f} seconds.")
 
 if __name__ == "__main__":
     main()
