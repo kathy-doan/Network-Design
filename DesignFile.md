@@ -33,3 +33,6 @@ Console output with print statements turned on
 
 ![alt text](udp_sim.png)
 Simulation plot for all 3 modes: No loss/bit-errors, ACK packet bit-error, and Data packet bit-error
+
+![alt text](gui_udp.png)
+GUI layout
