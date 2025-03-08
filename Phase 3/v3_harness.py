@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 from v3_server import plot_performance
 from v3_client import send_file
 
-DEBUG = True
+DEBUG = False
 
 def debug_print(msg):
     if DEBUG:
@@ -33,10 +33,10 @@ SERVER_PORT = 12000
 # Updated simulation modes now include modes 1,2,3,4,5.
 SIMULATION_MODES = [1, 2, 3, 4, 5]
 ERROR_RATES = [i/100.0 for i in range(0, 65, 5)]
-TRIALS = 4
+TRIALS = 3
 
 
-def run_single_transfer(simulation_mode, error_rate):
+def run_single_transfer(simulation_mode: int, error_rate: float) -> float:
     """
     Runs a single file transfer test for the given simulation_mode and error_rate.
     Starts the server in a thread and then runs the client.
@@ -50,6 +50,7 @@ def run_single_transfer(simulation_mode, error_rate):
         completion_time = run_server(simulation_mode, error_rate)
 
     from v3_server import run_server
+
     server = threading.Thread(target=server_thread)
     server.start()
 

@@ -15,7 +15,7 @@ Simulation Modes:
 """
 import random
 
-DEBUG = True
+DEBUG = False
 
 
 def debug_print(msg):

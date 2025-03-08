@@ -17,7 +17,7 @@ import socket
 import time
 from v3_udp_helpers import make_packet, send_packet
 
-DEBUG = True
+DEBUG = False
 
 
 def debug_print(msg):

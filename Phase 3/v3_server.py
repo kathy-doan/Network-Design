@@ -22,7 +22,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from v3_udp_helpers import checksum, flip_bit
 
-DEBUG = True
+DEBUG = False
 
 
 def debug_print(msg):
