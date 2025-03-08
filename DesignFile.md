@@ -31,5 +31,5 @@ Configuration settings for test harness
 ![alt text](simulationconsole_kd.png)
 Console output with print statements turned on
 
-![alt text](simulationMode1plot.png)
+![alt text](udp_sim.png)
 Simulation plot for all 3 modes: No loss/bit-errors, ACK packet bit-error, and Data packet bit-error
