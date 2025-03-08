@@ -25,7 +25,7 @@ tkinter_gui.py:  The GUI was designed using Tkinter and it provides an intuitive
 
 rdt 2.2: This reliable data transfer 2.2 uses sequence numbers to detect duplicate packets and implements a checksum verification to detect corruption. It is using nak free retransmission meaning its only sending packets when needed.
 
-![alt text](harnessconfig.png)
+![alt text](harnesscongig_kd.png)
 Configuration settings for test harness
 
 ![alt text](simulationconsole.png)
