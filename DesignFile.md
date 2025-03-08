@@ -28,7 +28,7 @@ rdt 2.2: This reliable data transfer 2.2 uses sequence numbers to detect duplica
 ![alt text](harnesscongig_kd.png)
 Configuration settings for test harness
 
-![alt text](simulationconsole.png)
+![alt text](simulationconsole_kd.png)
 Console output with print statements turned on
 
 ![alt text](simulationMode1plot.png)
