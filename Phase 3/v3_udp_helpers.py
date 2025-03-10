@@ -14,6 +14,8 @@ Simulation Modes:
     5: (Handled at server) Data packet loss.
 """
 import random
+import select
+import time
 
 DEBUG = False
 
@@ -75,18 +77,21 @@ def make_packet(file_name, sequence_number, packet_size=1024):
 
 
 def send_packet(packet, server_address, server_port, client_socket, sequence_number,
-                simulation_mode, error_rate):
+                simulation_mode, error_rate, timeout):
     """
-    Sends a packet over UDP and waits for the correct ACK.
-    In simulation mode 2, simulates ACK bit-errors.
+    Sends a packet over UDP and waits for the correct ACK using an explicit countdown timer.
+    In simulation mode 2, simulates ACK bit-error.
     In simulation mode 4, simulates ACK loss.
     The sender retransmits if the timeout expires or an incorrect ACK is received.
+    Returns the number of retransmissions for this packet.
     """
+    retransmission_count = 0
     while True:
         client_socket.sendto(packet, (server_address, server_port))
         debug_print(f"Packet sent: {sequence_number}")
-
-        try:
+        start_time = time.time()
+        ready = select.select([client_socket], [], [], timeout)
+        if ready[0]:
             acknowledgement, _ = client_socket.recvfrom(2048)
             try:
                 ack_sequence_number = int(acknowledgement.decode())
@@ -101,6 +106,7 @@ def send_packet(packet, server_address, server_port, client_socket, sequence_num
             # Simulation mode 4: simulate ACK loss by ignoring the received ACK.
             if simulation_mode == 4 and random.random() < error_rate:
                 debug_print(f"Simulating ACK loss for packet {sequence_number}")
+                retransmission_count += 1
                 continue
 
             if ack_sequence_number == sequence_number:
@@ -108,5 +114,10 @@ def send_packet(packet, server_address, server_port, client_socket, sequence_num
                 break
             else:
                 debug_print(f"ACK mismatch: received {ack_sequence_number}, expected {sequence_number}. Retrying...")
-        except Exception as e:
-            debug_print(f"ACK not received for packet {sequence_number} (Error: {e}). Resending...")
+                retransmission_count += 1
+                continue
+        else:
+            # Timeout expired
+            retransmission_count += 1
+            debug_print(f"Timeout for packet {sequence_number}. Retransmitting...")
+    return retransmission_count

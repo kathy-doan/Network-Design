@@ -28,3 +28,21 @@ by ignoring packets and sending previous ACK. The server also simulates Data pac
 Helper Functions (v3_udp_helpers.py): This script contains the useful functionality required <br>
 by the client and server scripts. 
 
+![alt text](./plots/plot_1.png)
+Pictured above is the completion time graph for all 5 simulations 
+the code runs. The Data loss line <br> shows faster execution time
+than the Data bit error line. This is likely due to data bit error 
+retransmitting packets that still have bit errors. Whereas a lost packet 
+can be retransmitted <br> after timing out and be successfully recieved 
+with no data errors. 
+
+![alt text](./plots/Retransmissions.png)
+Pictured above is the average retransmissions for each error mode.
+
+
+![alt text](./plots/Throughput.png)
+
+
+
+
+
