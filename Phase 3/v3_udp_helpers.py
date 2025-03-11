@@ -18,6 +18,7 @@ import select
 import time
 
 DEBUG = False
+random.seed(123)
 
 
 def debug_print(msg):

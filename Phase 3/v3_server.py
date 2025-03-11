@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from v3_udp_helpers import checksum, flip_bit
 
 DEBUG = False
+random.seed(123)
 
 
 def debug_print(msg):
