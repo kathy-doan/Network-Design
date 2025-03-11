@@ -53,7 +53,7 @@ this graph correlates <br> with the first graph displaying completion times.
 The lines have inverse relations. The faster the completion time the less the
 throughput declines as the error rate increases. 
 
-## Discussion
+## Discussion/Analysis
 The code used to generate the previously displayed plots did not have a specified seed value.
 <br> With each run comes some variance in the graphed plots. The source of this variance is not <br>
 exactly clear. We have implemented a static seed value of 123 to generate two more sets of plots <br>
