@@ -15,38 +15,43 @@ Simulation Modes:
 
 The server accepts packets in order and sends cumulative ACKs.
 """
+
 import os
 import socket
 import random
 import time
 import matplotlib
-
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import logging
 from v4_udp_helpers import checksum, flip_bit
 
-DEBUG = True
+
+if not logging.getLogger().hasHandlers():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s',
+        handlers=[
+            logging.FileHandler("simulation.log", mode="a"),
+            logging.StreamHandler()
+        ]
+    )
+
+# Disable noisy loggers from PIL and matplotlib
+logging.getLogger("PIL.PngImagePlugin").setLevel(logging.WARNING)
+logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
+
+# Create a logger for the server
+logger = logging.getLogger("Server")
+
 random.seed(123)
-
-
-def debug_print(msg):
-    if DEBUG:
-        print(msg)
-
 
 SERVER_PORT = 12000
 BUFFER_SIZE = 2048
 OUTPUT_FOLDER = "cat"
 
-
 def receive_packet(data, client_address, server_socket, simulation_mode, error_rate,
                    expected_seq, last_valid_ack):
-    """
-    Processes an incoming packet and sends the appropriate ACK.
-    In simulation mode 3, simulates a data bit-error on the payload.
-    In simulation mode 5, simulates data packet loss by dropping the packet.
-    Returns: (received_sequence_number, is_in_order, payload, finished)
-    """
     try:
         decoded_message = data.decode(errors='ignore')
         if decoded_message == "END":
@@ -63,19 +68,17 @@ def receive_packet(data, client_address, server_socket, simulation_mode, error_r
         checksum_value = int(parts[1])
         payload = parts[2]
     except Exception as e:
-        debug_print(f"Error parsing packet: {e}")
+        logger.debug(f"Error parsing packet: {e}")
         server_socket.sendto(str(last_valid_ack).encode(), client_address)
         return None, False, b"", False
 
-    # Simulation mode 5: simulate data packet loss.
     if simulation_mode == 5 and random.random() < error_rate:
-        debug_print(f"Simulating DATA packet loss for packet {sequence_number}")
+        logger.debug(f"Simulating DATA packet loss for packet {sequence_number}")
         server_socket.sendto(str(last_valid_ack).encode(), client_address)
         return sequence_number, False, b"", False
 
-    # Simulation mode 3: simulate data bit-error.
     if simulation_mode == 3 and random.random() < error_rate:
-        debug_print(f"Simulating DATA bit-error for packet {sequence_number}")
+        logger.debug(f"Simulating DATA bit-error for packet {sequence_number}")
         payload = flip_bit(payload)
 
     if checksum(payload) == checksum_value:
@@ -86,20 +89,14 @@ def receive_packet(data, client_address, server_socket, simulation_mode, error_r
             server_socket.sendto(str(last_valid_ack).encode(), client_address)
             return sequence_number, False, b"", False
     else:
-        debug_print(f"Checksum mismatch for packet {sequence_number}")
+        logger.debug(f"Checksum mismatch for packet {sequence_number}")
         server_socket.sendto(str(last_valid_ack).encode(), client_address)
         return sequence_number, False, b"", False
 
-
 def run_server(simulation_mode, error_rate):
-    """
-    Runs the UDP server to receive a file using the Go-Back-N protocol.
-    Returns the total completion time.
-    """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(("", SERVER_PORT))
-    debug_print(
-        f"Server listening on port {SERVER_PORT} with simulation mode {simulation_mode} and error rate {error_rate * 100:.0f}%")
+    logger.debug(f"Server listening on port {SERVER_PORT} with simulation mode {simulation_mode} and error rate {error_rate * 100:.0f}%")
 
     file_data = bytearray()
     expected_seq = 0
@@ -110,7 +107,7 @@ def run_server(simulation_mode, error_rate):
     while not finished:
         try:
             message, client_address = server_socket.recvfrom(BUFFER_SIZE)
-            debug_print(f"Received packet for expected_seq {expected_seq}")
+            logger.debug(f"Received packet for expected_seq {expected_seq}")
             seq_num, in_order, payload, finished = receive_packet(
                 message,
                 client_address,
@@ -123,13 +120,12 @@ def run_server(simulation_mode, error_rate):
             if finished:
                 break
             if seq_num is not None and in_order:
-                debug_print(f"Packet {seq_num} accepted. Moving to next sequence.")
+                logger.debug(f"Packet {seq_num} accepted. Moving to next sequence.")
                 file_data.extend(payload)
                 last_valid_ack = seq_num
                 expected_seq += 1
-            # If not in order or lost, retransmit previous ACK.
         except Exception as e:
-            debug_print(f"Server error: {e}")
+            logger.debug(f"Server error: {e}")
 
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     error_percent = int(error_rate * 100)
@@ -139,9 +135,8 @@ def run_server(simulation_mode, error_rate):
 
     server_socket.close()
     completion_time = time.time() - start_time
-    debug_print(f"File saved as {output_file} in {completion_time:.2f} seconds.")
+    logger.debug(f"File saved as {output_file} in {completion_time:.2f} seconds.")
     return completion_time
-
 
 def plot_performance(all_error_percentages, all_completion_times, modes, trials):
     plt.figure(figsize=(10, 5))
@@ -155,12 +150,10 @@ def plot_performance(all_error_percentages, all_completion_times, modes, trials)
     plt.legend()
     plt.show()
 
-
 def main():
     simulation_mode = 1
     error_rate = 0.0
     run_server(simulation_mode, error_rate)
-
 
 if __name__ == "__main__":
     main()

@@ -19,20 +19,30 @@ as the client now manages transmission and ACK handling directly.
 import random
 import select
 import time
+import logging
 
-DEBUG = True
+if not logging.getLogger().hasHandlers():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s',
+        handlers=[
+            logging.FileHandler("simulation.log", mode="a"),
+            logging.StreamHandler()
+        ]
+    )
+
+# Disable noisy loggers from PIL and matplotlib
+logging.getLogger("PIL.PngImagePlugin").setLevel(logging.WARNING)
+logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
+
+logger = logging.getLogger("UDPHelpers")
+
 random.seed(123)
 
-
 def debug_print(msg):
-    if DEBUG:
-        print(msg)
-
+    logger.debug(msg)
 
 def checksum(data):
-    """
-    Computes a 16-bit one's complement sum over 16-bit words.
-    """
     if len(data) % 2 == 1:
         data += b'\x00'
     total = 0
@@ -42,11 +52,7 @@ def checksum(data):
         total = (total & 0xFFFF) + (total >> 16)
     return ~total & 0xFFFF
 
-
 def flip_bit(data):
-    """
-    Flips one random bit in the data to simulate corruption.
-    """
     if not data:
         return data
     mutable = bytearray(data)
@@ -57,13 +63,7 @@ def flip_bit(data):
     mutable[byte_index] ^= (1 << bit_index)
     return bytes(mutable)
 
-
 def make_packet(file_name, sequence_number, packet_size=1024):
-    """
-    Reads a chunk of data from the file and constructs a packet with a header:
-        "<sequence_number>|<checksum>|<data>"
-    Returns None if there is no more data.
-    """
     try:
         with open(file_name, "rb") as file_to_send:
             file_to_send.seek(sequence_number * packet_size)
@@ -78,5 +78,3 @@ def make_packet(file_name, sequence_number, packet_size=1024):
     chk_value = checksum(data)
     header = f"{sequence_number}|{chk_value}|".encode()
     return header + data
-
-# Note: The send_packet function from earlier phases is not used in the Go-Back-N implementation.
