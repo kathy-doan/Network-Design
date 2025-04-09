@@ -26,18 +26,16 @@ import matplotlib.pyplot as plt
 import logging
 from v4_udp_helpers import checksum, flip_bit
 
-
 if not logging.getLogger().hasHandlers():
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s',
         handlers=[
             logging.FileHandler("simulation.log", mode="a"),
-            logging.StreamHandler()
+            # logging.StreamHandler()
         ]
     )
 
-# Disable noisy loggers from PIL and matplotlib
 logging.getLogger("PIL.PngImagePlugin").setLevel(logging.WARNING)
 logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
 

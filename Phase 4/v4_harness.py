@@ -19,7 +19,6 @@ Simulation Modes:
 import threading
 import time
 import matplotlib.pyplot as plt
-
 import matplotlib
 import logging
 
@@ -29,7 +28,7 @@ if not logging.getLogger().hasHandlers():
         format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s',
         handlers=[
             logging.FileHandler("simulation.log", mode="a"),
-            logging.StreamHandler()
+            # logging.StreamHandler()
         ]
     )
 
@@ -42,8 +41,8 @@ logger = logging.getLogger("Harness")
 
 SERVER_ADDRESS = '127.0.0.1'
 SERVER_PORT = 12000
-SIMULATION_MODES = [3]
-ERROR_RATES = [i/100.0 for i in range(0, 95, 5)]
+SIMULATION_MODES = [1, 2, 3, 4, 5]
+ERROR_RATES = [i/100.0 for i in range(0, 65, 5)]
 TRIALS = 3
 
 mode_labels = {1: "None", 2: "Ack", 3: "Data", 4: "ACK Loss", 5: "Data Loss"}
@@ -66,7 +65,7 @@ def run_single_transfer(simulation_mode: int, error_rate: float):
     server = threading.Thread(target=server_thread)
     client = threading.Thread(target=client_thread)
     server.start()
-    time.sleep(0.5)
+    time.sleep(0.5)  # Ensure the server is listening
     client.start()
     client.join()
     server.join()

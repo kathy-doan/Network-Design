@@ -18,6 +18,8 @@ packets to be in-flight and supports enabling/disabling of loss recovery.
 When loss recovery is enabled, a timer is maintained for the oldest unacknowledged packet;
 if the timer expires, all packets in the window are retransmitted.
 When loss recovery is disabled, the client sends each packet once and then sends "END" immediately.
+ACK errors in modes 2 and 4 are now simulated by returning a random value in the range [base, correct_ack - 1]
+(without duplicate ACK detection), ensuring the returned ACK is always less than the correct value.
 """
 
 import socket
@@ -35,7 +37,7 @@ if not logging.getLogger().hasHandlers():
         format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s',
         handlers=[
             logging.FileHandler("simulation.log", mode="a"),
-            logging.StreamHandler()
+            # logging.StreamHandler()  <-- Console output disabled
         ]
     )
 
@@ -51,7 +53,7 @@ SERVER_ADDRESS = '127.0.0.1'
 SERVER_PORT = 12000
 FILE_TO_SEND = "cat.bmp"  # Replace with a larger file if needed
 PACKET_SIZE = 1024
-TIMEOUT = 0.03  # Timeout value in seconds (30-50ms recommended)
+TIMEOUT = 0.01  # Timeout value in seconds
 WINDOW_SIZE = 10  # Fixed window size for Go-Back-N
 
 
@@ -59,7 +61,8 @@ def send_file(simulation_mode, error_rate, loss_recovery=True):
     """
     Reads the file and sends it in packets using the Go-Back-N protocol.
     When loss recovery is enabled, the client uses a sliding window mechanism,
-    a timer, and retransmits on timeout. When disabled, it sends each packet once.
+    a timer, and retransmits on timeout.
+    When disabled, it sends each packet once.
 
     Simulation Modes:
       2: Simulate ACK packet bit-errors.
@@ -82,7 +85,7 @@ def send_file(simulation_mode, error_rate, loss_recovery=True):
         file_end = False
 
         while True:
-            # Send new packets if window is not full and file is not finished
+            # Send new packets if window is not full and file is not finished.
             while next_seq < base + WINDOW_SIZE and not file_end:
                 packet = make_packet(FILE_TO_SEND, next_seq, PACKET_SIZE)
                 if packet is None:
@@ -95,7 +98,7 @@ def send_file(simulation_mode, error_rate, loss_recovery=True):
                     timer = time.time()
                 next_seq += 1
 
-            # Check for incoming ACKs
+            # Check for incoming ACKs.
             try:
                 ready = select.select([client_socket], [], [], 0.01)[0]
             except Exception:
@@ -104,18 +107,31 @@ def send_file(simulation_mode, error_rate, loss_recovery=True):
                 try:
                     ack_data, _ = client_socket.recvfrom(2048)
                     try:
-                        ack_num = int(ack_data.decode())
+                        correct_ack = int(ack_data.decode())
                     except:
-                        ack_num = -1
+                        correct_ack = -1
 
+                    # For simulation mode 2, simulate ACK bit-error by choosing a random value
+                    # in [base, correct_ack - 1] if possible.
                     if simulation_mode == 2 and random.random() < error_rate:
-                        logger.debug(f"Simulating ACK bit-error for received ACK {ack_num}")
-                        ack_num ^= 0x01
+                        logger.debug(f"Simulating ACK bit-error for received ACK {correct_ack}")
+                        time.sleep(.002)
+                        if correct_ack > base:
+                            ack_num = random.randint(base, correct_ack - 1)
+                        else:
+                            ack_num = -1
+                    # For simulation mode 4, simulated ACK error results in the same effect.
+                    elif simulation_mode == 4 and random.random() < error_rate:
+                        logger.debug(f"Simulating ACK loss for received ACK {correct_ack}")
+                        time.sleep(.002)
+                        if correct_ack > base:
+                            ack_num = random.randint(base, correct_ack - 1)
+                        else:
+                            ack_num = -1
+                    else:
+                        ack_num = correct_ack
 
-                    if simulation_mode == 4 and random.random() < error_rate:
-                        logger.debug(f"Simulating ACK loss for received ACK {ack_num}")
-                        ack_num = -1
-
+                    # Process ACK if it's at least the expected base
                     if ack_num >= base:
                         logger.debug(f"ACK {ack_num} received, sliding window")
                         base = ack_num + 1
@@ -123,11 +139,11 @@ def send_file(simulation_mode, error_rate, loss_recovery=True):
                             timer = None
                         else:
                             timer = time.time()
-                    # Otherwise, ignore the ACK.
+                    # If the received ACK is less than base, ignore it.
                 except Exception as e:
                     logger.debug(f"Error receiving ACK: {e}")
 
-            # Check for timeout on the base packet
+            # Check for timeout on the base packet.
             if timer is not None and (time.time() - timer) > TIMEOUT:
                 logger.debug(f"Timeout occurred. Retransmitting packets from {base} to {next_seq - 1}")
                 for seq in range(base, next_seq):
@@ -139,6 +155,7 @@ def send_file(simulation_mode, error_rate, loss_recovery=True):
                 client_socket.sendto("END".encode(), (SERVER_ADDRESS, SERVER_PORT))
                 break
     else:
+        # Loss recovery disabled: send each packet once without waiting for ACKs.
         next_seq = 0
         while True:
             packet = make_packet(FILE_TO_SEND, next_seq, PACKET_SIZE)

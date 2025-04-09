@@ -27,7 +27,7 @@ if not logging.getLogger().hasHandlers():
         format='%(asctime)s [%(name)s] [%(levelname)s] %(message)s',
         handlers=[
             logging.FileHandler("simulation.log", mode="a"),
-            logging.StreamHandler()
+            # logging.StreamHandler()
         ]
     )
 
