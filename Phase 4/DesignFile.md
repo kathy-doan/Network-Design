@@ -33,5 +33,14 @@ cumulative acknowledgement. These modes use a pseudo delay to simulate the extra
 to recover from ACK loss. Which in Go-Back-N is very little thanks to cumulative ACK.
 
 ![alt text](./plots/completionvError3trial.png)
+The plot above shows the performance of Go-Back-N protocol with sliding window of 10. The ACK bit loss and ACK loss result 
+in the same performance times due to the simulated loss method. Data bit error and Data loss are similar in performance times but not as close together as 
+ACK errors. 
 ![alt text](./plots/retransverror3trials.png)
+This plot shows the retransmissions for each mode. Modes 1, 2, and 4 do not trigger retransmission. For mode one
+this is expected, but for modes 2 and 4 with ACK loss the reason there is no triggered retransmission
+is that Go-Back-N uses cumulative ACK. An ACK can go missing or get corrupted, as long as an ACK comes in after 
+before the timer expires it will continue transmitting fresh packets. 
 ![alt text](./plots/throughputverror3trial.png)
+Here we see the throughput for each mode, as error increases the throughput slows down for modes 
+<br> 2-5. 
