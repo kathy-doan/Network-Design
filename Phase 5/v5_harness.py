@@ -3,10 +3,8 @@ import threading
 import time
 import logging
 import matplotlib
-import csv
-import os
 
-matplotlib.use('TkAgg')  # or 'Qt5Agg'
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from v5_server import run_server
 from v5_client import send_file
@@ -20,14 +18,11 @@ logger = logging.getLogger("Harness")
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 logging.getLogger('PIL').setLevel(logging.WARNING)
 
-
 # --- CONFIGURATION ---
-SIMULATION_MODES = [1, 2]
-ERROR_RATES = [i / 100.0 for i in range(0, 25, 5)]  # 0%, 5%, ..., 60%
-TRIALS = 1
-FILENAME = "kitty.png"  # Ensure file exists and is >500KB
-
-
+SIMULATION_MODES = [1, 2, 3, 4, 5]
+ERROR_RATES = [i / 100.0 for i in range(0, 65, 5)]  # 0%, 5%, ..., 80%
+TRIALS = 4
+FILENAME = "kitty.png"
 # ----------------------
 
 def run_single_transfer(mode: int, error_rate: float):
@@ -55,7 +50,6 @@ def run_single_transfer(mode: int, error_rate: float):
 
     return server_time, client_time, retrans, throughput
 
-
 def main():
     error_pcts = [int(er * 100) for er in ERROR_RATES]
 
@@ -82,7 +76,6 @@ def main():
             avg_retrans[mode].append(sum(rlist) / len(rlist))
             avg_tp[mode].append(sum(tplist) / len(tplist))
 
-    # Now plot: client time, retransmissions, throughput
     plots = [
         ("Average Client Completion Time vs Error Rate", avg_client, "Time (s)"),
         ("Average Retransmissions vs Error Rate", avg_retrans, "Retransmissions"),
@@ -106,41 +99,6 @@ def main():
         plt.tight_layout()
 
     plt.show()
-
-
-for mode in SIMULATION_MODES:
-    for er in ERROR_RATES:
-        csv_file = f"metrics_mode{mode}_err{int(er * 100)}.csv"
-        if not os.path.exists(csv_file):
-            continue
-
-        times, cwnds, rtts, rtos = [], [], [], []
-        with open(csv_file, "r") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                times.append(float(row["Time"]))
-                cwnds.append(float(row["CWND"]))
-                rtts.append(float(row["SampleRTT"]))
-                rtos.append(float(row["RTO"]))
-
-
-        def plot_metric(title, ydata, ylabel):
-            plt.figure(figsize=(8, 5))
-            plt.plot(times, ydata, label=f"Mode {mode}, {int(er * 100)}% err", marker='.')
-            plt.xlabel("Time (s)")
-            plt.ylabel(ylabel)
-            plt.title(title + f" – Mode {mode} @ {int(er * 100)}% Error")
-            plt.grid(True)
-            plt.tight_layout()
-            plt.legend()
-
-
-        plot_metric("Congestion Window vs Time", cwnds, "CWND")
-        plot_metric("Sample RTT vs Time", rtts, "RTT (s)")
-        plot_metric("Retransmission Timeout vs Time", rtos, "RTO (s)")
-
-    plt.show()
-
 
 if __name__ == "__main__":
     main()

@@ -5,8 +5,8 @@ import os
 import select
 import random
 import logging
-import csv
 from v5_helpers import make_packet, checksum
+random.seed(123)
 
 # Logging Setup
 ENABLE_CONSOLE_LOG = True
@@ -52,7 +52,6 @@ def tcp_handshake(sock):
 def tcp_teardown(sock):
     logger.info("Starting connection teardown")
     sock.settimeout(2)
-
     try:
         sock.sendto(FIN.encode(), (SERVER_ADDRESS, SERVER_PORT))
         data, _ = sock.recvfrom(1024)
@@ -60,7 +59,7 @@ def tcp_teardown(sock):
         if response == ACK:
             logger.info("Teardown acknowledged by server")
         else:
-            logger.warning("Unexpected response during teardown: '{response}'")
+            logger.warning(f"Unexpected response during teardown: '{response}'")
     except socket.timeout:
         logger.warning("Timeout waiting for server ACK during teardown")
 
@@ -84,14 +83,7 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
     start_time = time.time()
     file_end = False
 
-    # Tracking lists for plotting
-    timestamps = []
-    cwnd_list = []
-    rtt_list = []
-    rto_list = []
-
     while not file_end or base != next_seq:
-        # Send packets within cwnd
         while next_seq < base + cwnd and not file_end:
             packet = make_packet(file_name, next_seq, PACKET_SIZE)
             if packet is None:
@@ -104,7 +96,6 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
             logger.debug(f"Sent packet {next_seq}")
             next_seq += 1
 
-        # Wait for ACK
         sock.settimeout(0.01)
         try:
             ack_data, _ = sock.recvfrom(2048)
@@ -128,12 +119,6 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
                         estimated_rtt = (1 - ALPHA) * estimated_rtt + ALPHA * sample_rtt
                         dev_rtt = (1 - BETA) * dev_rtt + BETA * abs(sample_rtt - estimated_rtt)
                     rto = estimated_rtt + 4 * dev_rtt
-
-                    # Log metrics
-                    timestamps.append(time.time() - start_time)
-                    cwnd_list.append(cwnd)
-                    rtt_list.append(sample_rtt)
-                    rto_list.append(rto)
 
                     logger.debug(f"ACK {ack} received. Updating cwnd and base")
 
@@ -166,14 +151,6 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
 
     duration = time.time() - start_time
     throughput = os.path.getsize(file_name) / duration
-
-    # Save plot data
-    metrics_file = f"metrics_mode{simulation_mode}_err{int(error_rate*100)}.csv"
-    with open(metrics_file, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["Time", "CWND", "SampleRTT", "RTO"])
-        for row in zip(timestamps, cwnd_list, rtt_list, rto_list):
-            writer.writerow(row)
 
     return duration, retransmissions, throughput
 

@@ -7,6 +7,7 @@ import random
 import logging
 from v5_helpers import checksum, flip_bit
 
+random.seed(123)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [SERVER] %(message)s', handlers=[logging.FileHandler("tcp_simulation.log")])
 logger = logging.getLogger("Server")
 
