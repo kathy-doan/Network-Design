@@ -17,7 +17,17 @@ TCP strategies.
 
 ### Code Explanation
 
+![alt text](./codesnips/clientsend.png)
+In the v5_client.py file this send file function is used to send 
+the file from client to server. It includes arguments that get filled 
+by the harness during testing for the appropriate simulation mode, error rate,
+congestion protocol and the file to send. 
 
+![alt text](./codesnips/serverrun.png)
+![alt text](./codesnips/harnessrun.png)
+The two function above carry the information that the client sender uses. The harness runs the
+run single transfer within a loop, within run single transfer the client and server are run using the
+passed in arguments. Most of the heavy lifting for this project is within the harness script.
 
 ### CHART 1: TCP Performance with varying loss/error rate
 
