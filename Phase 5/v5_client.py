@@ -10,7 +10,7 @@ from v5_helpers import make_packet, checksum
 random.seed(123)
 
 # Logging Setup
-ENABLE_CONSOLE_LOG = True
+ENABLE_CONSOLE_LOG = False
 log_handlers = [logging.FileHandler("tcp_simulation.log", mode="a")]
 if ENABLE_CONSOLE_LOG:
     log_handlers.append(logging.StreamHandler())
@@ -39,7 +39,7 @@ FIN = "FIN"
 
 
 def tcp_handshake(sock):
-    sock.settimeout(2)
+    sock.settimeout(1)
     logger.info("Starting 3-way handshake")
     sock.sendto(SYN.encode(), (SERVER_ADDRESS, SERVER_PORT))
     try:
@@ -55,7 +55,7 @@ def tcp_handshake(sock):
 
 def tcp_teardown(sock):
     logger.info("Starting connection teardown")
-    sock.settimeout(2)
+    sock.settimeout(1)
     try:
         sock.sendto(FIN.encode(), (SERVER_ADDRESS, SERVER_PORT))
         data, _ = sock.recvfrom(1024)
@@ -135,62 +135,97 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
                 ack = int(ack_str)
 
                 # Check for duplicate ACKs (TCP Reno)
-                if ack == base - 1:
+                if ack < base:  # Any ACK that doesn't advance the window could be a duplicate
+                    # Track duplicate ACKs by sequence number
                     duplicate_acks[ack] = duplicate_acks.get(ack, 0) + 1
 
                     # Fast Retransmit and Fast Recovery
                     if duplicate_acks[ack] == DUPLICATE_ACK_THRESHOLD:
-                        logger.warning(f"Triple duplicate ACK for {ack}, triggering Fast Retransmit")
-                        if base in packets:
-                            sock.sendto(packets[base][0], (SERVER_ADDRESS, SERVER_PORT))
+                        logger.debug(f"Triple duplicate ACK for {ack}, triggering Fast Retransmit")
+
+                        # The most likely lost packet is the one right after the ACK
+                        lost_packet_seq = ack + 1
+
+                        if lost_packet_seq in packets:
+                            sock.sendto(packets[lost_packet_seq][0], (SERVER_ADDRESS, SERVER_PORT))
                             retransmissions += 1
 
-                            # TCP Reno Fast Recovery
-                            ssthresh = max(int(cwnd / 2), 2)
-                            cwnd = ssthresh + 3  # Inflated by duplicate ACKs
+                            # Enter Fast Recovery: Standard TCP Reno approach
+                            ssthresh = max(int(cwnd / 2), 2)  # Cut window in half
+                            cwnd = ssthresh + 3  # Initial inflation by 3 segments
                             fast_recovery = True
+
+                            # Reset the timer after retransmission
+                            timer = time.time()
+
                             logger.debug(f"Fast Recovery: cwnd={cwnd}, ssthresh={ssthresh}")
 
                     elif duplicate_acks[ack] > DUPLICATE_ACK_THRESHOLD and fast_recovery:
-                        # For each additional duplicate ACK, increase cwnd by 1
+                        # For each additional duplicate ACK during Fast Recovery:
+                        # 1. Inflate window by one segment
+                        # 2. Send a new segment if possible
                         cwnd += 1
                         logger.debug(f"Fast Recovery inflation: cwnd={cwnd}")
 
-                elif ack >= base and ack in packets:
-                    # Reset duplicate ACK counter for new ACKs
+                        # Try to send a new packet if window allows
+                        if next_seq < base + cwnd and not file_end:
+                            packet = make_packet(file_name, next_seq, PACKET_SIZE)
+                            if packet is not None:
+                                sock.sendto(packet, (SERVER_ADDRESS, SERVER_PORT))
+                                packets[next_seq] = (packet, time.time())
+                                logger.debug(f"Fast Recovery: Sent new packet {next_seq}")
+                                next_seq += 1
+
+                elif ack >= base:  # New ACK that advances the window
+                    # Calculate how many new segments were acknowledged
+                    newly_acked = ack - base + 1
+
+                    # Reset duplicate ACK counter and exit Fast Recovery if active
                     duplicate_acks.clear()
 
-                    # If exiting fast recovery
                     if fast_recovery:
+                        # Exit Fast Recovery properly:
+                        # 1. Set cwnd to ssthresh (deflate the window)
                         cwnd = ssthresh
                         fast_recovery = False
                         logger.debug(f"Exiting Fast Recovery: cwnd={cwnd}")
-
-                    # Calculate RTT and update RTO
-                    sample_rtt = time.time() - packets[ack][1]
-                    rtt_history.append((time.time() - start_time, sample_rtt))
-
-                    if estimated_rtt is None:
-                        estimated_rtt = sample_rtt
                     else:
-                        estimated_rtt = (1 - ALPHA) * estimated_rtt + ALPHA * sample_rtt
-                        dev_rtt = (1 - BETA) * dev_rtt + BETA * abs(sample_rtt - estimated_rtt)
-                    rto = estimated_rtt + 4 * dev_rtt
-                    rto_history.append((time.time() - start_time, rto))
-
-                    logger.debug(f"ACK {ack} received. Updating cwnd and base. RTT={sample_rtt:.4f}s, RTO={rto:.4f}s")
-
-                    # Normal cwnd update
-                    if not fast_recovery:
+                        # Normal cwnd update (not in Fast Recovery)
                         if cwnd < ssthresh:
-                            cwnd += 1  # Slow start
+                            # Slow Start: Increase exponentially
+                            cwnd += newly_acked  # Increase by number of newly acked segments
                             logger.debug(f"Slow Start: cwnd={cwnd}")
                         else:
-                            cwnd += 1 / cwnd  # Congestion avoidance
+                            # Congestion Avoidance: Increase linearly
+                            cwnd += newly_acked / cwnd  # Add fractional increase
                             logger.debug(f"Congestion Avoidance: cwnd={cwnd}")
 
+                    # Calculate RTT and update RTO
+                    if ack in packets:
+                        sample_rtt = time.time() - packets[ack][1]
+                        rtt_history.append((time.time() - start_time, sample_rtt))
+
+                        if estimated_rtt is None:
+                            estimated_rtt = sample_rtt
+                        else:
+                            # Standard RTT estimation (RFC 6298)
+                            estimated_rtt = (1 - ALPHA) * estimated_rtt + ALPHA * sample_rtt
+                            dev_rtt = (1 - BETA) * dev_rtt + BETA * abs(sample_rtt - estimated_rtt)
+
+                        # Update RTO with 4*DevRTT variance
+                        rto = estimated_rtt + 4 * dev_rtt
+                        # Ensure RTO is not too small
+                        rto = max(rto, 0.2)  # Minimum RTO of 200ms
+                        rto_history.append((time.time() - start_time, rto))
+
+                        logger.debug(f"ACK {ack} received. RTT={sample_rtt:.4f}s, RTO={rto:.4f}s")
+
+                    # Update base and manage the send window
                     base = ack + 1
+                    # Reset timer if there are unacknowledged packets
                     timer = time.time() if base != next_seq else None
+
+                    # Clean up acknowledged packets
                     for seq in list(packets):
                         if seq <= ack:
                             del packets[seq]

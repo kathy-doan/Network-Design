@@ -2,7 +2,7 @@
 import random
 import logging
 
-ENABLE_CONSOLE_LOG = True
+ENABLE_CONSOLE_LOG = False
 log_handlers = [logging.FileHandler("tcp_simulation.log", mode="a")]
 if ENABLE_CONSOLE_LOG:
     log_handlers.append(logging.StreamHandler())

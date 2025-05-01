@@ -365,8 +365,11 @@ def run_window_size_test():
     return completion_times
 
 
+"""
+
+
 def compare_protocols(error_rate_results):
-    """Create a comparison plot between different protocols/modes"""
+    # Create a comparison plot between different protocols/modes
     # Sample data point - use error rate of 20%
     try:
         error_index = next((i for i, er in enumerate(ERROR_RATES) if abs(er - 0.2) < 0.01), 0)
@@ -392,6 +395,7 @@ def compare_protocols(error_rate_results):
         plt.close()
     except Exception as e:
         logger.error(f"Error creating protocol comparison plot: {e}")
+"""
 
 
 def main():
@@ -418,12 +422,13 @@ def main():
             logger.error(f"Window size test failed: {e}")
 
         # Only run protocol comparison if we have error rate results
+        """
         if error_rate_results:
             try:
                 compare_protocols(error_rate_results)
             except Exception as e:
                 logger.error(f"Protocol comparison failed: {e}")
-
+        """
     except Exception as e:
         logger.error(f"Critical error in main: {e}")
     finally:
