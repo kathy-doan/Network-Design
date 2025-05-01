@@ -1,8 +1,17 @@
-#!/usr/bin/env python3
+"""
+Benjamin Dearden
+Michael Smith
+Peter Dingue
+Kathy Doan
+4/30/25
+v5_client.py for Phase 5 EECE 4830 Project
+This client file simulates a simplified TCP sender. Simulated error is
+present in this file for use with the harness script to run simulation tests.
+
+"""
 import socket
 import time
 import os
-import select
 import random
 import logging
 from v5_helpers import make_packet, checksum
@@ -37,6 +46,12 @@ SYN_ACK = "SYN-ACK"
 ACK = "ACK"
 FIN = "FIN"
 
+# Congestion Control Protocol Types
+PROTOCOL_SLOW_START_ONLY = 1  # Only implements Slow Start
+PROTOCOL_AIMD_ONLY = 2  # Only implements AIMD
+PROTOCOL_TAHOE = 3  # TCP Tahoe
+PROTOCOL_RENO = 4  # TCP Reno
+
 
 def tcp_handshake(sock):
     sock.settimeout(1)
@@ -68,7 +83,7 @@ def tcp_teardown(sock):
         logger.warning("Timeout waiting for server ACK during teardown")
 
 
-def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
+def send_file(simulation_mode, error_rate, congestion_protocol, file_name="cat.jpeg",
               initial_timeout=None, initial_cwnd=None):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     if not tcp_handshake(sock):
@@ -101,6 +116,8 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
     # Record initial values
     cwnd_history.append((0, cwnd))
     rto_history.append((0, rto))
+
+    logger.info(f"Using congestion protocol: {congestion_protocol}")
 
     while not file_end or base != next_seq:
         # Record cwnd at this point in time
@@ -139,9 +156,9 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
                     # Track duplicate ACKs by sequence number
                     duplicate_acks[ack] = duplicate_acks.get(ack, 0) + 1
 
-                    # Fast Retransmit and Fast Recovery
-                    if duplicate_acks[ack] == DUPLICATE_ACK_THRESHOLD:
-                        logger.debug(f"Triple duplicate ACK for {ack}, triggering Fast Retransmit")
+                    # Fast Retransmit and Fast Recovery (for RENO only)
+                    if congestion_protocol == PROTOCOL_RENO and duplicate_acks[ack] == DUPLICATE_ACK_THRESHOLD:
+                        logger.debug(f"Triple duplicate ACK for {ack}, triggering Fast Retransmit and Fast Recovery")
 
                         # The most likely lost packet is the one right after the ACK
                         lost_packet_seq = ack + 1
@@ -160,7 +177,8 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
 
                             logger.debug(f"Fast Recovery: cwnd={cwnd}, ssthresh={ssthresh}")
 
-                    elif duplicate_acks[ack] > DUPLICATE_ACK_THRESHOLD and fast_recovery:
+                    elif congestion_protocol == PROTOCOL_RENO and duplicate_acks[
+                        ack] > DUPLICATE_ACK_THRESHOLD and fast_recovery:
                         # For each additional duplicate ACK during Fast Recovery:
                         # 1. Inflate window by one segment
                         # 2. Send a new segment if possible
@@ -176,6 +194,26 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
                                 logger.debug(f"Fast Recovery: Sent new packet {next_seq}")
                                 next_seq += 1
 
+                    # For non-RENO protocols - just track duplicate ACKs but don't do fast recovery
+                    elif congestion_protocol in [PROTOCOL_TAHOE] and duplicate_acks[ack] == DUPLICATE_ACK_THRESHOLD:
+                        logger.debug(
+                            f"Triple duplicate ACK for {ack}, triggering Fast Retransmit (without Fast Recovery)")
+
+                        # Retransmit the suspected lost packet
+                        lost_packet_seq = ack + 1
+                        if lost_packet_seq in packets:
+                            sock.sendto(packets[lost_packet_seq][0], (SERVER_ADDRESS, SERVER_PORT))
+                            retransmissions += 1
+
+                            # Cut window in half (like Tahoe but without going all the way to 1)
+                            ssthresh = max(int(cwnd / 2), 2)
+                            cwnd = 1  # Tahoe goes back to slow start
+
+                            # Reset the timer after retransmission
+                            timer = time.time()
+
+                            logger.debug(f"Fast Retransmit: cwnd={cwnd}, ssthresh={ssthresh}")
+
                 elif ack >= base:  # New ACK that advances the window
                     # Calculate how many new segments were acknowledged
                     newly_acked = ack - base + 1
@@ -183,19 +221,20 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
                     # Reset duplicate ACK counter and exit Fast Recovery if active
                     duplicate_acks.clear()
 
-                    if fast_recovery:
-                        # Exit Fast Recovery properly:
+                    if congestion_protocol == PROTOCOL_RENO and fast_recovery:
+                        # Exit Fast Recovery properly for RENO:
                         # 1. Set cwnd to ssthresh (deflate the window)
                         cwnd = ssthresh
                         fast_recovery = False
                         logger.debug(f"Exiting Fast Recovery: cwnd={cwnd}")
                     else:
                         # Normal cwnd update (not in Fast Recovery)
-                        if cwnd < ssthresh:
+                        if congestion_protocol in [PROTOCOL_SLOW_START_ONLY, PROTOCOL_TAHOE,
+                                                   PROTOCOL_RENO] and cwnd < ssthresh:
                             # Slow Start: Increase exponentially
                             cwnd += newly_acked  # Increase by number of newly acked segments
                             logger.debug(f"Slow Start: cwnd={cwnd}")
-                        else:
+                        elif congestion_protocol in [PROTOCOL_AIMD_ONLY, PROTOCOL_TAHOE, PROTOCOL_RENO]:
                             # Congestion Avoidance: Increase linearly
                             cwnd += newly_acked / cwnd  # Add fractional increase
                             logger.debug(f"Congestion Avoidance: cwnd={cwnd}")
@@ -215,7 +254,7 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
                         # Update RTO with 4*DevRTT variance
                         rto = estimated_rtt + 4 * dev_rtt
                         # Ensure RTO is not too small
-                        rto = max(rto, 0.2)  # Minimum RTO of 200ms
+                        rto = max(rto, 0.05)  # Minimum RTO of 50ms
                         rto_history.append((time.time() - start_time, rto))
 
                         logger.debug(f"ACK {ack} received. RTT={sample_rtt:.4f}s, RTO={rto:.4f}s")
@@ -234,13 +273,24 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
 
         if timer and time.time() - timer > rto:
             logger.warning(f"Timeout: retransmitting from {base}")
-            ssthresh = max(int(cwnd / 2), 1)
-            cwnd = 1  # TCP Tahoe behavior (reset to 1)
-            logger.debug(f"Timeout: cwnd={cwnd}, ssthresh={ssthresh}")
+
+            # Different timeout behaviors based on protocol
+            if congestion_protocol in [PROTOCOL_TAHOE, PROTOCOL_RENO]:
+                # Tahoe and Reno both reduce ssthresh to half of cwnd
+                ssthresh = max(int(cwnd / 2), 1)
+                cwnd = 1  # TCP Tahoe and Reno reset to 1 on timeout
+                logger.debug(f"Timeout: cwnd={cwnd}, ssthresh={ssthresh}")
+            elif congestion_protocol == PROTOCOL_AIMD_ONLY:
+                # For AIMD only, we'll reduce the window but not go back to slow start
+                ssthresh = max(int(cwnd / 2), 1)
+                cwnd = ssthresh  # Set cwnd to the new threshold
+                logger.debug(f"Timeout: cwnd={cwnd}, ssthresh={ssthresh}")
+            # For SLOW_START_ONLY, we keep growing the window and don't reduce
 
             # Record the window change due to timeout
             cwnd_history.append((time.time() - start_time, cwnd))
 
+            # Retransmit all unacknowledged packets
             for seq in range(base, next_seq):
                 if seq in packets:
                     sock.sendto(packets[seq][0], (SERVER_ADDRESS, SERVER_PORT))
@@ -263,12 +313,14 @@ def send_file(simulation_mode, error_rate, file_name="cat.jpeg",
 def main():
     simulation_mode = 1
     error_rate = 0.0
+    congestion_protocol = PROTOCOL_RENO  # Default to Reno
 
     # Run a single file transfer with data collection
-    duration, retransmissions, throughput, cwnd_history, rtt_history, rto_history = send_file(simulation_mode,
-                                                                                              error_rate)
+    duration, retransmissions, throughput, cwnd_history, rtt_history, rto_history = send_file(
+        simulation_mode, error_rate, congestion_protocol
+    )
 
-    # Generate plots from collected data
+    # Generate __plots from collected data
     import matplotlib.pyplot as plt
 
     # Plot 1: Congestion Window Size vs Time

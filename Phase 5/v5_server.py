@@ -1,5 +1,14 @@
+"""
+Benjamin Dearden
+Michael Smith
+Peter Dingue
+Kathy Doan
+4/30/25
+v5_server.py for Phase 5 EECE 4830 Project
+This server file simulates a simplified TCP receiver for phase 5. Simulated error is
+present in this file for use with the harness script to run simulation tests.
 
-# Modified v5_server.py for Simplified TCP with Proper Teardown
+"""
 import socket
 import os
 import time

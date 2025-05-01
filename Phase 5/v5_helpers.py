@@ -1,8 +1,18 @@
-# Updated v5_helpers.py for TCP-like Segment Handling
+"""
+Benjamin Dearden
+Michael Smith
+Peter Dingue
+Kathy Doan
+4/30/25
+v5_helpers.py for Phase 5 EECE 4830 Project
+
+This helper function file contains functions used in phase 5 .py files
+
+"""
 import random
 import logging
 
-ENABLE_CONSOLE_LOG = False
+ENABLE_CONSOLE_LOG = True
 log_handlers = [logging.FileHandler("tcp_simulation.log", mode="a")]
 if ENABLE_CONSOLE_LOG:
     log_handlers.append(logging.StreamHandler())

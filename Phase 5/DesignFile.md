@@ -17,34 +17,82 @@ TCP strategies.
 
 ### Code Explanation
 
-CHART 1
-![alt text](./plots/completion_vs_errorrate.png)
-In the image above the completion time vs error rate is shown for each mode. The almost unaffected <br>
-modes 2 and 4 maintain speed close to that of no error because TCP uses cumulative ACK. A lost or corrupted <br>
-ACK does not do much to reduce the completion time of the program. The spikes in the graph across the 5 <br>
-modes, particularly 3 and 5 are likely that way because the dynamic window sizing and congestion <br>
-control protocols are more efficient at specific error rates.
 
-CHART 2
-![alt text](./plots/completion_vs_timeout.png)
-In this plot we see the performance effect on completion time based on timeout value with a fixed error rate <br>
-of 20%. We see it has its best performance with a timeout around 30ms and 70 ms. Other timeout values <br> 
-result in slight increases in completion time. 
 
-CHART 3
-![alt text](./plots/completion_vs_windowsize.png)
-In this plot we see the performance impact of window size on completion time. It shows a generally <br>
-downward trend, the bigger the window size, the faster the completion time. 
+### CHART 1: TCP Performance with varying loss/error rate
 
-The next 5 plots display for each mode the change over time in the congestion window size at a fixed 20% error<br>
-![alt text](./plots/cwnd_vs_time_mode1_error20.png)
-![alt text](./plots/cwnd_vs_time_mode2_error20.png)
-![alt text](./plots/cwnd_vs_time_mode3_error20.png)
-![alt text](./plots/cwnd_vs_time_mode4_error20.png)
-![alt text](./plots/cwnd_vs_time_mode5_error20.png)
+Mode: No injected loss
+![alt text](./plots/completion_vs_errorrate_normal.png)
+Mode: ACK bit error
+![alt text](./plots/completion_vs_errorrate_ack_bit_error.png)
+Mode: Packet bit error
+![alt text](./plots/completion_vs_errorrate_packet_corruption.png)
+Mode: ACK loss
+![alt text](./plots/completion_vs_errorrate_ack_loss.png)
+Mode: Data loss
+![alt text](./plots/completion_vs_errorrate_packet_loss.png)
 
-In mode 1,2 and 4 we see that the congestion window gradually increases over time before plateauing. This <br>
-is the behavior we expect as eventually sending more packets within a larger window stops being beneficial. <br>
-In modes 3 and 5 we see erratic behavior indicating the resetting of the window due to timeout and transmission <br>
-failures.
+In the charts above the completion time vs error rate is shown for each congestion protocol one mode at a time. 
+The almost unaffected modes 2 and 4 maintain speed close to that of no error because TCP uses cumulative ACK. 
+A lost or corrupted ACK does not do much to reduce the completion time of the program. The spikes in the graph 
+across the 5 modes, particularly 3 and 5 are likely that way because the dynamic window sizing and congestion 
+control protocols are more efficient at specific error rates. 
 
+### CHART 2: Completion time vs timeout value
+
+Mode: No injected loss
+![alt text](./plots/completion_vs_timeout_normal.png)
+Mode: ACK bit error
+![alt text](./plots/completion_vs_timeout_ack_bit_error.png)
+Mode: Packet bit error
+![alt text](./plots/completion_vs_timeout_packet_corruption.png)
+Mode: ACK loss
+![alt text](./plots/completion_vs_timeout_ack_loss.png)
+Mode: Data loss
+![alt text](./plots/completion_vs_timeout_packet_loss.png)
+In these plots showing the effect timeout value has on completion time we see
+a significant level of variance across the different congestion protocols and modes. 
+The most significant contributor to completion time is the error mode itself and less 
+so the congestion control protocol. This is likely due to the very small window that 
+a packet is being transmitted. The short time spent in transit means there is not a 
+great difference in completion time due to increased or decreased timeout value.
+
+### CHART 3: Completion time vs window size
+
+No injected loss 
+![alt text](./plots/completion_vs_windowsize_normal.png)
+Mode: ACK bit error
+![alt text](./plots/completion_vs_windowsize_ack_bit_error.png)
+Mode: Packet bit error 
+![alt text](./plots/completion_vs_windowsize_packet_corruption.png)
+Mode: ACK loss
+![alt text](./plots/completion_vs_windowsize_ack_loss.png)
+Mode: Data Loss
+![alt text](./plots/completion_vs_windowsize_packet_loss.png)
+
+
+
+### CHART 4: Protocol performance comparison
+![alt text](./plots/protocol_vs_error_mode_completion.png)
+In the graph above we see the performance of each congestion protocol compared 
+for each error scenario. Modes 1, 2, and 4 suffer the least losses due to the 
+way TCP handles ACK's cumulatively in general. The two data loss modes, 3 and 5 suffer the most
+performance losses. The congestion control protocols each result in similar performance with Reno 
+outperforming the rest in data bit error (mode 3) and Tahoe slightly outperforming the rest in data
+loss (mode 5).
+
+### Additional Charts
+
+The next 5 plots display for each mode the change in transmission time in the congestion window size at a
+fixed 20% error across the 5 different error modes.These plots show the window growing until it reaches 
+saturation where the transmission is steadily flowing. Some of these are effected by very frequent failure 
+and retransmission which causes the window to go back to 1 and results in a graph that looks like a square function.
+![alt text](./plots/cwnd_vs_time_mode1_protocol1_error20.png)
+![alt text](./plots/cwnd_vs_time_mode2_protocol1_error20.png)
+![alt text](./plots/cwnd_vs_time_mode3_protocol1_error20.png)
+![alt text](./plots/cwnd_vs_time_mode4_protocol1_error20.png)
+![alt text](./plots/cwnd_vs_time_mode5_protocol1_error20.png)
+
+Here is a sample RTT vs time showing the increase in return time as it stabilizes and drops to nothing 
+once the transmission is over.
+![alt text](./plots/rtt_vs_time_comprehensive_protocol1_mode1.png)
