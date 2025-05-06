@@ -44,3 +44,10 @@ before the timer expires it will continue transmitting fresh packets.
 ![alt text](./plots/throughputverror3trial.png)
 Here we see the throughput for each mode, as error increases the throughput slows down for modes 
 <br> 2-5. 
+
+
+Extra Credit:
+![alt text](./plots/chart1_protocol_vs_loss.png)
+![alt text](./plots/chart2_timeout_optimization.png)
+![alt text](./plots/chart3_window_optimization.png)
+![alt text](./plots/chart4_protocol_comparison.png)
