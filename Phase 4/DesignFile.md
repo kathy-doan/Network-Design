@@ -48,7 +48,13 @@ Here we see the throughput for each mode, as error increases the throughput slow
 
 Extra Credit:
 ![alt text](./chart1_protocol_vs_loss.png)
+This plot shows how increasing packet loss affects each protocol. The hierarchy remains consistent (SR > GBN > SW) across all loss rates. GBN shows some spikes at 30% and 60% loss rates, which might reflect statistical variations due to to cumulative retransmissions under certain conditions. SR maintains good performance even as network conditions worsen.
 
 ![alt text](./chart2_timeout_optimization.png)
+This plot shows how timeout settings affect each protocol at a fixed 20% packet loss rate. SR consistently performs best (0.06-0.08s), followed by GBN (0.09-0.12s), with SW showing the worst performance (0.12-0.14s). The timeout value doesn't drastically change performance for any protocol, though there are subtle variations that suggest each protocol has slightly different optimal timeout settings.
+
 ![alt text](./chart3_window_optimization.png)
+This plot shows how window size affects GBN and SR at 20% loss rate. GBN with window size 1 performs identically to SW, confirming that without pipelining, GBN reduces to SW behavior. As window size increases, GBN performance improves then slightly degrades at larger sizes. SR still has the best performance across all window sizes because it has selective retransmission. 
+
 ![alt text](./chart4_protocol_comparison.png)
+This bar chart provides a direct comparison of the three protocols at 20% loss rate. SR shows the best performance (~0.04s), GBN shows medium performance (~0.09s), and SW shows the worst performance (~0.13s). This matches the theoretical efficiency of these protocols with SR's selective retransmission strategy proving most effective.
