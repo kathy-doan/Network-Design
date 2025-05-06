@@ -47,7 +47,7 @@ Here we see the throughput for each mode, as error increases the throughput slow
 
 
 Extra Credit:
-![alt text](./plots/chart1_protocol_vs_loss.png)
-![alt text](./plots/chart2_timeout_optimization.png)
-![alt text](./plots/chart3_window_optimization.png)
-![alt text](./plots/chart4_protocol_comparison.png)
+![alt text](./pics/chart1_protocol_vs_loss.png)
+![alt text](./pics/chart2_timeout_optimization.png)
+![alt text](./pics/chart3_window_optimization.png)
+![alt text](./pics/chart4_protocol_comparison.png)
